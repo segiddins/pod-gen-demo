@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -eux
+set -o pipefail
+
+bundle install
+bundle exec pod gen
+
+workspace=gen/PodGenDemo/PodGenDemo.xcworkspace
+schemes=( App-iOS App-macOS )
+
+for scheme in ${schemes[@]}; do
+	full_log=xcodebuild.$scheme.log
+	echo "Running tests for the $scheme scheme, see $full_log for the full log"
+
+	if [ "$scheme" = 'App-iOS' ]
+	then
+		destination_args="-destination 'name=iPhone 7'"
+		sdk_args='-sdk iphonesimulator'
+	else
+		destination_args=''
+		sdk_args=''
+	fi
+
+	eval xcodebuild -workspace $workspace -scheme $scheme ${sdk_args: } ${destination_args: } EXPANDED_CODE_SIGN_IDENTITY=- test | tee $full_log | bundle exec xcpretty
+done
